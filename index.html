@@ -19,10 +19,15 @@
     text-shadow: 2px 2px 5px #000;
   }
 
-  p {
+  p.tagline {
     font-size: 1.5em;
-    color: black; /* tagline in black */
+    color: black;
     text-shadow: 1px 1px 0 #fff;
+  }
+
+  p.gallery-link {
+    font-size: 1.2em;
+    margin-top: 10px;
   }
 
   #camera-container {
@@ -80,13 +85,20 @@
     background-color: #888;
     cursor: not-allowed;
   }
-
 </style>
 </head>
 <body>
 
 <h1>🎉 Zaimars Turns Four 🎉</h1>
-<p>Roar • Sparkle • Shine</p>
+<p class="tagline">Roar • Sparkle • Shine</p>
+
+<!-- Gallery link -->
+<p class="gallery-link">
+  View full gallery: 
+  <a href="https://lbemcrfivrhbhseafrlc.supabase.co/storage/v1/object/public/Party%20Photos/" target="_blank">
+    Click here
+  </a>
+</p>
 
 <div id="camera-container">
   <video id="video" autoplay playsinline></video>
@@ -103,7 +115,6 @@
 <!-- Supabase JS -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-  // Supabase setup
   const supabaseUrl = 'https://lbemcrfivrhbhseafrlc.supabase.co';
   const supabaseKey = 'sb_publishable_ey_VaVfrz5YwZIxTHcHcaA_pSY5W8-R';
   const supabase = supabase.createClient(supabaseUrl, supabaseKey);
@@ -118,7 +129,7 @@
   let devices = [];
   let currentIndex = 0;
 
-  // Get list of cameras
+  // Get cameras
   async function getCameras() {
     const allDevices = await navigator.mediaDevices.enumerateDevices();
     devices = allDevices.filter(d => d.kind === "videoinput");
@@ -137,7 +148,7 @@
     }
   }
 
-  // Start camera button
+  // Buttons
   startBtn.onclick = async () => {
     await getCameras();
     if (devices.length === 0) return alert("No cameras found.");
@@ -145,14 +156,13 @@
     startCamera(devices[currentIndex]?.deviceId);
   };
 
-  // Toggle camera button
   toggleBtn.onclick = () => {
     if (devices.length < 2) return;
     currentIndex = (currentIndex + 1) % devices.length;
     startCamera(devices[currentIndex].deviceId);
   };
 
-  // Load gallery on page load
+  // Load gallery
   async function loadGallery() {
     const { data, error } = await supabase.storage.from('Party Photos').list('', { limit: 100, sortBy: { column: 'created_at', order: 'desc' }});
     if (error) return console.error(error);
@@ -165,7 +175,7 @@
     }
   }
 
-  loadGallery(); // Load gallery on page load
+  loadGallery();
 
   // Snap photo and upload only
   snapBtn.onclick = async () => {
@@ -187,14 +197,14 @@
       canvas.toBlob(async (blob) => {
         const fileName = `Zaimar_${Date.now()}.png`;
 
-        // Upload to Supabase bucket
+        // Upload to Supabase
         const { data, error } = await supabase.storage.from('Party Photos').upload(fileName, blob, { cacheControl: '3600', upsert: true });
         if (error) return console.error(error);
 
         // Get public URL
         const { publicUrl } = supabase.storage.from('Party Photos').getPublicUrl(fileName);
 
-        // Add to gallery dynamically
+        // Add to gallery
         const img = document.createElement('img');
         img.src = publicUrl;
         gallery.insertBefore(img, gallery.firstChild);
