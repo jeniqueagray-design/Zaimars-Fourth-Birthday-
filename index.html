@@ -43,6 +43,21 @@
     display: block;
   }
 
+  #gallery {
+    margin-top: 20px;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  #gallery img {
+    width: 150px;
+    margin: 5px;
+    border: 3px solid #fff;
+    border-radius: 10px;
+    box-shadow: 2px 2px 5px #000;
+  }
+
   #qr-code {
     margin-top: 20px;
   }
@@ -88,99 +103,65 @@
 
 <!-- Optional: QR code to upload photos to Google Form -->
 <div id="qr-code">
-  <p>Scan this QR code to upload your photo to the gallery:</p>
+  <p>Scan this QR code to upload your photo to the gallery (optional):</p>
   <img src="YOUR_QR_CODE.png" alt="Scan QR code" width="200">
 </div>
 
-<!-- Optional: link to gallery -->
 <h2>Party Gallery</h2>
-<p><a href="YOUR_SHARED_DRIVE_FOLDER_LINK" target="_blank">View all photos here!</a></p>
+<div id="gallery"></div>
 
+<!-- Supabase JS -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const video = document.getElementById("video");
-const startBtn = document.getElementById("start");
-const toggleBtn = document.getElementById("toggle");
-const snapBtn = document.getElementById("snap");
+  const supabaseUrl = 'https://lbemcrfivrhbhseafrlc.supabase.co';
+  const supabaseKey = 'sb_publishable_ey_VaVfrz5YwZIxTHcHcaA_pSY5W8-R';
+  const supabase = supabase.createClient(supabaseUrl, supabaseKey);
 
-let currentStream = null;
-let devices = [];
-let currentIndex = 0;
+  const video = document.getElementById("video");
+  const startBtn = document.getElementById("start");
+  const toggleBtn = document.getElementById("toggle");
+  const snapBtn = document.getElementById("snap");
+  const gallery = document.getElementById("gallery");
 
-// Get all cameras
-async function getCameras() {
-  const allDevices = await navigator.mediaDevices.enumerateDevices();
-  devices = allDevices.filter(d => d.kind === "videoinput");
-  if (devices.length > 1) toggleBtn.disabled = false;
-}
+  let currentStream = null;
+  let devices = [];
+  let currentIndex = 0;
 
-// Start camera
-async function startCamera(deviceId) {
-  if (currentStream) {
-    currentStream.getTracks().forEach(track => track.stop());
+  async function getCameras() {
+    const allDevices = await navigator.mediaDevices.enumerateDevices();
+    devices = allDevices.filter(d => d.kind === "videoinput");
+    if (devices.length > 1) toggleBtn.disabled = false;
   }
-  let constraints = {};
-  if (deviceId) {
-    constraints = { video: { deviceId: { exact: deviceId } } };
-  } else {
-    constraints = { video: { facingMode: { ideal: "environment" } } };
+
+  async function startCamera(deviceId) {
+    if (currentStream) currentStream.getTracks().forEach(track => track.stop());
+    let constraints = deviceId ? { video: { deviceId: { exact: deviceId } } } : { video: { facingMode: { ideal: "environment" } } };
+    try {
+      currentStream = await navigator.mediaDevices.getUserMedia(constraints);
+      video.srcObject = currentStream;
+    } catch (err) {
+      alert("Cannot access camera. Try a different browser.");
+      console.error(err);
+    }
   }
-  try {
-    currentStream = await navigator.mediaDevices.getUserMedia(constraints);
-    video.srcObject = currentStream;
-  } catch (err) {
-    alert("Cannot access camera. Try a different browser.");
-    console.error(err);
-  }
-}
 
-// Start camera button
-startBtn.onclick = async () => {
-  await getCameras();
-  if (devices.length === 0) {
-    alert("No cameras found.");
-    return;
-  }
-  currentIndex = 0;
-  startCamera(devices[currentIndex]?.deviceId);
-};
-
-// Toggle camera button
-toggleBtn.onclick = () => {
-  if (devices.length < 2) return;
-  currentIndex = (currentIndex + 1) % devices.length;
-  startCamera(devices[currentIndex].deviceId);
-};
-
-// Snap photo with border and automatic download
-snapBtn.onclick = () => {
-  // Use video native resolution for sharpness
-  const canvas = document.createElement("canvas");
-  canvas.width = video.videoWidth;
-  canvas.height = video.videoHeight;
-  const ctx = canvas.getContext("2d");
-
-  // Draw video
-  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-  // Draw the transparent border
-  const borderImg = new Image();
-  borderImg.src = 'Border%20Flyer.png'; // make sure this file is in your repo root
-  borderImg.onload = () => {
-    ctx.drawImage(borderImg, 0, 0, canvas.width, canvas.height);
-
-    // Convert canvas to data URL
-    const dataURL = canvas.toDataURL("image/png");
-
-    // Automatic download
-    const link = document.createElement('a');
-    link.href = dataURL;
-    link.download = `Zaimar_Photo_${Date.now()}.png`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  startBtn.onclick = async () => {
+    await getCameras();
+    if (devices.length === 0) return alert("No cameras found.");
+    currentIndex = 0;
+    startCamera(devices[currentIndex]?.deviceId);
   };
-};
-</script>
 
-</body>
-</html>
+  toggleBtn.onclick = () => {
+    if (devices.length < 2) return;
+    currentIndex = (currentIndex + 1) % devices.length;
+    startCamera(devices[currentIndex].deviceId);
+  };
+
+  // Load existing gallery from Supabase
+  async function loadGallery() {
+    const { data, error } = await supabase.storage.from('party-photos').list('', { limit: 100, sortBy: { column: 'created_at', order: 'desc' }});
+    if (error) return console.error(error);
+    gallery.innerHTML = '';
+    for (const file of data) {
+      const { publicUrl }
