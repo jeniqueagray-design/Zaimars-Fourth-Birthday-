@@ -92,14 +92,7 @@
 <h1>🎉 Zaimars Turns Four 🎉</h1>
 <p class="tagline">Roar • Sparkle • Shine</p>
 
-<!-- Gallery link -->
-<p class="gallery-link">
-  View full gallery: 
-  <a href="https://lbemcrfivrhbhseafrlc.supabase.co/storage/v1/object/public/Party%20Photos/" target="_blank">
-    Click here
-  </a>
-</p>
-
+<!-- Camera controls -->
 <div id="camera-container">
   <video id="video" autoplay playsinline></video>
 </div>
@@ -115,6 +108,7 @@
 <!-- Supabase JS -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
+  // --- Supabase setup ---
   const supabaseUrl = 'https://lbemcrfivrhbhseafrlc.supabase.co';
   const supabaseKey = 'sb_publishable_ey_VaVfrz5YwZIxTHcHcaA_pSY5W8-R';
   const supabase = supabase.createClient(supabaseUrl, supabaseKey);
@@ -129,7 +123,7 @@
   let devices = [];
   let currentIndex = 0;
 
-  // Get cameras
+  // --- Camera functions ---
   async function getCameras() {
     const allDevices = await navigator.mediaDevices.enumerateDevices();
     devices = allDevices.filter(d => d.kind === "videoinput");
@@ -143,12 +137,11 @@
       currentStream = await navigator.mediaDevices.getUserMedia(constraints);
       video.srcObject = currentStream;
     } catch (err) {
-      alert("Cannot access camera. Try a different browser.");
+      alert("Cannot access camera. Try a different browser or device.");
       console.error(err);
     }
   }
 
-  // Buttons
   startBtn.onclick = async () => {
     await getCameras();
     if (devices.length === 0) return alert("No cameras found.");
@@ -162,7 +155,7 @@
     startCamera(devices[currentIndex].deviceId);
   };
 
-  // Load gallery
+  // --- Load gallery ---
   async function loadGallery() {
     const { data, error } = await supabase.storage.from('Party Photos').list('', { limit: 100, sortBy: { column: 'created_at', order: 'desc' }});
     if (error) return console.error(error);
@@ -177,7 +170,7 @@
 
   loadGallery();
 
-  // Snap photo and upload only
+  // --- Snap photo and upload ---
   snapBtn.onclick = async () => {
     const canvas = document.createElement("canvas");
     canvas.width = video.videoWidth;
@@ -187,24 +180,21 @@
     // Draw video
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-    // Draw border overlay
+    // Draw border from Supabase
     const borderImg = new Image();
-    borderImg.src = 'Border%20Flyer.png';
+    borderImg.crossOrigin = "anonymous"; // ensure no CORS issues
+    borderImg.src = 'https://lbemcrfivrhbhseafrlc.supabase.co/storage/v1/object/public/Party%20Photos/Border%20Flyer.png';
     borderImg.onload = async () => {
       ctx.drawImage(borderImg, 0, 0, canvas.width, canvas.height);
 
-      // Convert canvas to blob
+      // Upload to Supabase
       canvas.toBlob(async (blob) => {
         const fileName = `Zaimar_${Date.now()}.png`;
-
-        // Upload to Supabase
         const { data, error } = await supabase.storage.from('Party Photos').upload(fileName, blob, { cacheControl: '3600', upsert: true });
         if (error) return console.error(error);
 
-        // Get public URL
+        // Add photo to gallery live
         const { publicUrl } = supabase.storage.from('Party Photos').getPublicUrl(fileName);
-
-        // Add to gallery
         const img = document.createElement('img');
         img.src = publicUrl;
         gallery.insertBefore(img, gallery.firstChild);
@@ -215,3 +205,4 @@
 
 </body>
 </html>
+
