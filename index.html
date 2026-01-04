@@ -11,7 +11,6 @@
     background: url('Dinosaur%20and%20unicorn%20birthday%20party.png') no-repeat center center fixed;
     background-size: cover;
     text-align: center;
-    color: white;
   }
 
   h1 {
@@ -22,8 +21,8 @@
 
   p {
     font-size: 1.5em;
-    text-shadow: 1px 1px 3px #000;
-    color: #ffeb3b; /* golden sparkle color */
+    color: black; /* tagline in black */
+    text-shadow: 1px 1px 0 #fff; /* subtle white shadow for readability */
   }
 
   #camera-container {
@@ -32,158 +31,24 @@
     margin-top: 20px;
     width: 340px;
     height: 260px;
-    border: 10px solid #ff69b4;
+    border: 10px solid;
+    border-image: linear-gradient(45deg, yellow, green) 1;
     border-radius: 25px;
-    box-shadow: 0 0 20px #ffb6c1, 0 0 40px #ff69b4 inset;
+    box-shadow: 0 0 20px #ffeb3b, 0 0 40px #32cd32 inset;
     overflow: hidden;
     background: rgba(255,255,255,0.1);
   }
 
-  /* Text inside the border */
+  /* Border text */
   #camera-container::before {
     content: "Zaimars Turns 4";
     position: absolute;
     top: 0;
     left: 50%;
     transform: translateX(-50%);
-    font-size: 1.5em;
+    font-size: 1.8em;
     font-weight: bold;
-    color: #ffeb3b;
-    text-shadow: 2px 2px 5px #000;
-    background-color: rgba(255, 0, 255, 0.2);
-    padding: 5px 10px;
-    border-radius: 10px;
-  }
-
-  video {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: block;
-  }
-
-  button {
-    margin: 10px;
-    padding: 10px 20px;
-    font-size: 18px;
-    border-radius: 12px;
-    cursor: pointer;
-    background: linear-gradient(45deg, #ff69b4, #ffb6c1);
-    border: none;
-    color: white;
-    font-weight: bold;
-    box-shadow: 2px 2px 5px #000;
-    transition: transform 0.1s ease;
-  }
-
-  button:hover {
-    transform: scale(1.05);
-  }
-
-  button:disabled {
-    background-color: #888;
-    cursor: not-allowed;
-  }
-</style>
-</head>
-<body>
-
-<h1>🎉 Zaimars Turns Four 🎉</h1>
-<p>Roar • Sparkle • Smile</p>
-
-<div id="camera-container">
-  <video id="video" autoplay playsinline></video>
-</div>
-
-<br>
-<button id="start">Start Camera</button>
-<button id="toggle" disabled>Switch Camera</button>
-<button id="snap">Take Photo</button>
-
-<script>
-const video = document.getElementById("video");
-const startBtn = document.getElementById("start");
-const toggleBtn = document.getElementById("toggle");
-const snapBtn = document.getElementById("snap");
-
-let currentStream = null;
-let devices = [];
-let currentIndex = 0;
-
-// Get all cameras
-async function getCameras() {
-  const allDevices = await navigator.mediaDevices.enumerateDevices();
-  devices = allDevices.filter(d => d.kind === "videoinput");
-  if (devices.length > 1) toggleBtn.disabled = false;
-}
-
-// Start camera by deviceId or fallback
-async function startCamera(deviceId) {
-  if (currentStream) {
-    currentStream.getTracks().forEach(track => track.stop());
-  }
-  let constraints = {};
-  if (deviceId) {
-    constraints = { video: { deviceId: { exact: deviceId } } };
-  } else {
-    constraints = { video: { facingMode: { ideal: "environment" } } };
-  }
-  try {
-    currentStream = await navigator.mediaDevices.getUserMedia(constraints);
-    video.srcObject = currentStream;
-    console.log("Camera started");
-  } catch (err) {
-    alert("Cannot access camera. Try a different browser.");
-    console.error("Camera error:", err);
-  }
-}
-
-// Start camera
-startBtn.onclick = async () => {
-  await getCameras();
-  if (devices.length === 0) {
-    alert("No cameras found.");
-    return;
-  }
-  currentIndex = 0;
-  startCamera(devices[currentIndex]?.deviceId);
-};
-
-// Toggle camera
-toggleBtn.onclick = () => {
-  if (devices.length < 2) return;
-  currentIndex = (currentIndex + 1) % devices.length;
-  startCamera(devices[currentIndex].deviceId);
-};
-
-// Snap photo with border text
-snapBtn.onclick = () => {
-  const container = document.getElementById("camera-container");
-  const canvas = document.createElement("canvas");
-  canvas.width = container.clientWidth;
-  canvas.height = container.clientHeight;
-  const ctx = canvas.getContext("2d");
-
-  // Draw video
-  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-  // Draw border
-  ctx.lineWidth = 20;
-  ctx.strokeStyle = "#ff69b4";
-  ctx.strokeRect(0, 0, canvas.width, canvas.height);
-
-  // Draw text
-  ctx.font = "bold 24px Comic Sans MS";
-  ctx.fillStyle = "#ffeb3b";
-  ctx.textAlign = "center";
-  ctx.fillText("Zaimars Turns 4", canvas.width / 2, 30);
-
-  // Open photo in new tab
-  const dataURL = canvas.toDataURL("image/png");
-  const win = window.open();
-  win.document.write(`<img src="${dataURL}" width="100%">`);
-};
-</script>
-
-</body>
-</html>
+    color: #ff69b4;
+    text-shadow: 2px 2px 3px #000;
+    background-color: rgba(255, 255, 255, 0.2);
+    paddi
