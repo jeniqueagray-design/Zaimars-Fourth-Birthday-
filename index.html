@@ -31,15 +31,23 @@
 <video id="video" autoplay></video>
 <br>
 <button id="start">Start Camera</button>
-
 <script>
   const video = document.getElementById("video");
   const button = document.getElementById("start");
 
   button.onclick = () => {
-    navigator.mediaDevices.getUserMedia({ video: true })
-      .then(stream => video.srcObject = stream)
-      .catch(() => alert("Camera access denied"));
+    navigator.mediaDevices.getUserMedia({
+      video: {
+        facingMode: { ideal: "environment" }
+      }
+    })
+    .then(stream => {
+      video.srcObject = stream;
+    })
+    .catch(err => {
+      alert("Could not access camera. Try a different browser.");
+      console.error(err);
+    });
   };
 </script>
 
