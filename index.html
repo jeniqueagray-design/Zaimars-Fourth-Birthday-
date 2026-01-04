@@ -47,46 +47,54 @@
     });
   };
 <script>
-  const video = document.getElementById("video");
-  const startBtn = document.getElementById("start");
-  const toggleBtn = document.getElementById("toggle");
+const video = document.getElementById("video");
+const startBtn = document.getElementById("start");
+const toggleBtn = document.getElementById("toggle");
 
-  let currentFacing = "environment"; // start with back camera
-  let currentStream = null;
+let currentStream = null;
+let devices = [];
+let currentIndex = 0;
 
-  async function startCamera(facingMode) {
-    if (currentStream) {
-      // Stop all tracks of previous stream
-      currentStream.getTracks().forEach(track => track.stop());
-    }
+// List all video input devices (cameras)
+async function getCameras() {
+  const allDevices = await navigator.mediaDevices.enumerateDevices();
+  devices = allDevices.filter(d => d.kind === "videoinput");
+  if (devices.length > 1) toggleBtn.disabled = false;
+}
 
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { exact: facingMode } }
-      });
-      currentStream = stream;
-      video.srcObject = stream;
-      toggleBtn.disabled = false; // enable toggle button
-    } catch (err) {
-      // Fallback if exact facingMode not supported
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: true
-      });
-      currentStream = stream;
-      video.srcObject = stream;
-      console.error(err);
-    }
+// Start camera by deviceId
+async function startCamera(deviceId) {
+  if (currentStream) {
+    currentStream.getTracks().forEach(track => track.stop());
   }
+  try {
+    currentStream = await navigator.mediaDevices.getUserMedia({
+      video: { deviceId: { exact: deviceId } }
+    });
+    video.srcObject = currentStream;
+  } catch (err) {
+    alert("Cannot access camera. Try a different browser.");
+    console.error(err);
+  }
+}
 
-  startBtn.onclick = () => startCamera(currentFacing);
+// Start button click
+startBtn.onclick = async () => {
+  await getCameras();
+  if (devices.length === 0) {
+    alert("No cameras found.");
+    return;
+  }
+  currentIndex = 0; // start with first camera (usually back)
+  startCamera(devices[currentIndex].deviceId);
+};
 
-  toggleBtn.onclick = () => {
-    // Toggle between front and back
-    currentFacing = currentFacing === "environment" ? "user" : "environment";
-    startCamera(currentFacing);
-  };
+// Toggle button click
+toggleBtn.onclick = () => {
+  if (devices.length < 2) return;
+  currentIndex = (currentIndex + 1) % devices.length;
+  startCamera(devices[currentIndex].deviceId);
+};
 </script>
-
-
 </body>
 </html>
