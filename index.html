@@ -14,32 +14,38 @@ body {
   text-align: center;
 }
 
-/* Title */
+/* Fade background */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: rgba(255,255,255,0.65);
+  z-index: -1;
+}
+
 h1 {
-  margin-top: 20px;
-  font-size: 3em;
+  margin: 10px 0 5px;
+  font-size: clamp(2.2rem, 5vw, 3.2rem);
   color: black;
-  text-shadow: 2px 2px 4px #fff;
 }
 
 p {
-  font-size: 1.5em;
-  text-shadow: 1px 1px 0 #000;
+  font-size: 1.4em;
+  margin-bottom: 10px;
+  color: black;
 }
 
-/* Camera container */
+/* BIG camera */
 #camera-container {
   position: relative;
-  display: inline-block;
-  margin-top: 20px;
-
-  width: 90vw;
-  max-width: 520px;
-  aspect-ratio: 4 / 3;
-
+  width: 92vw;
+  max-width: 900px;
+  height: 70vh;
+  margin: 10px auto;
+  border-radius: 30px;
   overflow: hidden;
-  border-radius: 25px;
-  background: rgba(255,255,255,0.1);
+  background: black;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.4);
 }
 
 #camera-container video {
@@ -60,28 +66,25 @@ p {
 
 /* Buttons */
 button {
-  margin: 10px;
-  padding: 10px 22px;
+  margin: 8px;
+  padding: 14px 26px;
   font-size: 18px;
-  border-radius: 12px;
+  border-radius: 14px;
   cursor: pointer;
   background: linear-gradient(45deg, #ff69b4, #ffb6c1);
   border: none;
   color: white;
   font-weight: bold;
-  box-shadow: 2px 2px 5px #000;
 }
 
 button:disabled {
-  background: #888;
-  cursor: not-allowed;
+  background: #999;
 }
 
 /* Links */
-.gallery-link,
-#view-gallery {
+a {
   display: block;
-  margin-top: 12px;
+  margin: 10px 0;
   font-size: 1.2em;
   color: black;
   text-decoration: underline;
@@ -99,11 +102,9 @@ button:disabled {
   <img
     id="border-overlay"
     src="https://lbemcrfivrhbhseafrlc.supabase.co/storage/v1/object/public/Party%20Photos/Border%20Flyer.png"
-    alt="Border Overlay"
+    alt="Border"
   />
 </div>
-
-<br>
 
 <button id="start">Start Camera</button>
 <button id="toggle" disabled>Switch Camera</button>
@@ -113,15 +114,16 @@ button:disabled {
 
 <a
   id="view-gallery"
-  href="https://drive.google.com/drive/folders/1NVzPpcGULNBn3ytPbDzFAFmCUn28G1HQ?usp=drive_link"
+  href="YOUR_GOOGLE_DRIVE_LINK_HERE"
   target="_blank"
 >
-  View Gallery
+View Gallery
 </a>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
 <script>
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
 
   const supabase = window.supabase.createClient(
     "https://lbemcrfivrhbhseafrlc.supabase.co",
@@ -134,78 +136,83 @@ document.addEventListener("DOMContentLoaded", () => {
   const snapBtn = document.getElementById("snap");
   const latestLinkDiv = document.getElementById("latest-photo-link");
 
+  let devices = [];
+  let currentIndex = 0;
   let stream = null;
-  let cameras = [];
-  let cameraIndex = 0;
 
   async function getCameras() {
-    const devices = await navigator.mediaDevices.enumerateDevices();
-    cameras = devices.filter(d => d.kind === "videoinput");
-    toggleBtn.disabled = cameras.length < 2;
+    const all = await navigator.mediaDevices.enumerateDevices();
+    devices = all.filter(d => d.kind === "videoinput");
+    toggleBtn.disabled = devices.length < 2;
   }
 
   async function startCamera(deviceId) {
     if (stream) stream.getTracks().forEach(t => t.stop());
 
     stream = await navigator.mediaDevices.getUserMedia({
-      video: deviceId ? { deviceId: { exact: deviceId } } : true
+      video: {
+        deviceId: deviceId ? { exact: deviceId } : undefined,
+        width: { ideal: 1920 },
+        height: { ideal: 1080 }
+      }
     });
 
     video.srcObject = stream;
-
-    await new Promise(r => video.onloadedmetadata = r);
+    await video.play();
     snapBtn.disabled = false;
   }
 
   startBtn.onclick = async () => {
-    await navigator.mediaDevices.getUserMedia({ video: true });
     await getCameras();
-    cameraIndex = 0;
-    startCamera(cameras[cameraIndex]?.deviceId);
+    currentIndex = 0;
+    await startCamera(devices[currentIndex].deviceId);
   };
 
-  toggleBtn.onclick = () => {
-    cameraIndex = (cameraIndex + 1) % cameras.length;
-    startCamera(cameras[cameraIndex].deviceId);
+  toggleBtn.onclick = async () => {
+    currentIndex = (currentIndex + 1) % devices.length;
+    await startCamera(devices[currentIndex].deviceId);
   };
 
   snapBtn.onclick = async () => {
-    if (!video.videoWidth) return alert("Camera not ready");
-
     const canvas = document.createElement("canvas");
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
-
     const ctx = canvas.getContext("2d");
-    ctx.drawImage(video, 0, 0);
 
-    const border = new Image();
-    border.crossOrigin = "anonymous";
-    border.src = document.getElementById("border-overlay").src;
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-    border.onload = async () => {
-      ctx.drawImage(border, 0, 0, canvas.width, canvas.height);
+    const border = document.getElementById("border-overlay");
+    ctx.drawImage(border, 0, 0, canvas.width, canvas.height);
 
-      canvas.toBlob(async blob => {
-        const fileName = `Zaimar_${Date.now()}.png`;
+    canvas.toBlob(async blob => {
+      const fileName = `Zaimar_${Date.now()}.png`;
 
-        await supabase.storage
-          .from("Party Photos")
-          .upload(fileName, blob, { contentType: "image/png" });
+      const { error } = await supabase
+        .storage
+        .from("Party Photos")
+        .upload(fileName, blob, {
+          contentType: "image/png",
+          upsert: true
+        });
 
-        const { data } = supabase.storage
-          .from("Party Photos")
-          .getPublicUrl(fileName);
+      if (error) {
+        alert(error.message);
+        return;
+      }
 
-        latestLinkDiv.innerHTML = `
-          <a class="gallery-link" href="${data.publicUrl}" target="_blank">
-            View Last Uploaded Photo
-          </a>
-        `;
+      const { data } = supabase
+        .storage
+        .from("Party Photos")
+        .getPublicUrl(fileName);
 
-        alert("Photo uploaded! 🎉");
-      });
-    };
+      latestLinkDiv.innerHTML = `
+        <a href="${data.publicUrl}" target="_blank">
+          View Last Uploaded Photo
+        </a>
+      `;
+
+      alert("Photo uploaded! 🎉");
+    }, "image/png");
   };
 });
 </script>
