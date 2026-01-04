@@ -23,6 +23,7 @@
     p {
       font-size: 1.5em;
       text-shadow: 1px 1px 3px #000;
+      color: #ffeb3b; /* golden sparkle color */
     }
 
     #camera-container {
@@ -53,11 +54,16 @@
       font-size: 18px;
       border-radius: 8px;
       cursor: pointer;
-      background-color: #ff69b4;
+      background: linear-gradient(45deg, #ff69b4, #ffb6c1);
       border: none;
       color: white;
       font-weight: bold;
       box-shadow: 2px 2px 5px #000;
+      transition: transform 0.1s ease;
+    }
+
+    button:hover {
+      transform: scale(1.05);
     }
 
     button:disabled {
@@ -69,10 +75,10 @@
 <body>
 
 <h1>🎉 Zaimars Turns Four 🎉</h1>
-<p>Scan • Snap • Smile</p>
+<p>Roar • Sparkle • Smile</p>
 
 <div id="camera-container">
-  <video id="video" autoplay></video>
+  <video id="video" autoplay playsinline></video>
   <img id="photo-overlay" src="Border%20Flyer.png">
 </div>
 
@@ -91,6 +97,7 @@ let currentStream = null;
 let devices = [];
 let currentIndex = 0;
 
-// List all video input devices (cameras)
+// Get all cameras
 async function getCameras() {
-  const allDevices = a
+  const allDevices = await navigator.mediaDevices.enumerateDevices();
+  devices = allDevices.filt
