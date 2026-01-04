@@ -55,4 +55,159 @@
     font-size: 18px;
     border-radius: 12px;
     cursor: pointer;
-    background: linear-gradient(45deg, #ff69b4, #f
+    background: linear-gradient(45deg, #ff69b4, #ffb6c1);
+    border: none;
+    color: white;
+    font-weight: bold;
+    box-shadow: 2px 2px 5px #000;
+    position: relative;
+    z-index: 10;
+  }
+
+  button:disabled {
+    background: #888;
+    cursor: not-allowed;
+  }
+
+  .gallery-link {
+    display: block;
+    margin-top: 15px;
+    font-size: 1.2em;
+    color: #fff;
+    text-decoration: underline;
+    position: relative;
+    z-index: 10;
+  }
+</style>
+</head>
+<body>
+
+<h1>🎉 Zaimars Turns Four 🎉</h1>
+<p>Roar • Sparkle • Shine</p>
+
+<div id="camera-container">
+  <video id="video" autoplay playsinline></video>
+</div>
+
+<br />
+
+<button id="start">Start Camera</button>
+<button id="toggle" disabled>Switch Camera</button>
+<button id="snap" disabled>Take Photo</button>
+
+<a class="gallery-link" href="https://lbemcrfivrhbhseafrlc.supabase.co/storage/v1/object/public/Party%20Photos/" target="_blank">
+  View Gallery
+</a>
+
+<!-- Supabase JS -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+
+  const supabaseUrl = "https://lbemcrfivrhbhseafrlc.supabase.co";
+  const supabaseKey = "sb_publishable_ey_VaVfrz5YwZIxTHcHcaA_pSY5W8-R";
+  const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+  const video = document.getElementById("video");
+  const startBtn = document.getElementById("start");
+  const toggleBtn = document.getElementById("toggle");
+  const snapBtn = document.getElementById("snap");
+
+  let currentStream = null;
+  let devices = [];
+  let currentIndex = 0;
+
+  // Get all cameras
+  async function getCameras() {
+    const allDevices = await navigator.mediaDevices.enumerateDevices();
+    devices = allDevices.filter(d => d.kind === "videoinput");
+    toggleBtn.disabled = devices.length < 2;
+  }
+
+  // Start camera safely
+  async function startCamera(deviceId) {
+    try {
+      if (currentStream) currentStream.getTracks().forEach(track => track.stop());
+      const constraints = deviceId
+        ? { video: { deviceId: { exact: deviceId } } }
+        : { video: { facingMode: { ideal: "environment" } } };
+      currentStream = await navigator.mediaDevices.getUserMedia(constraints);
+      video.srcObject = currentStream;
+
+      // Wait for video metadata to load
+      await new Promise(resolve => {
+        if (video.readyState >= 2) resolve();
+        else video.onloadedmetadata = resolve;
+      });
+
+      snapBtn.disabled = false;
+    } catch (err) {
+      console.error("Camera error:", err);
+      alert("Cannot access camera. Make sure permissions are allowed and page is HTTPS.");
+    }
+  }
+
+  // Button Handlers
+  startBtn.onclick = async () => {
+    await getCameras();
+    if (devices.length === 0) return alert("No cameras found.");
+    currentIndex = 0;
+    await startCamera(devices[currentIndex].deviceId);
+  };
+
+  toggleBtn.onclick = () => {
+    if (devices.length < 2) return;
+    currentIndex = (currentIndex + 1) % devices.length;
+    startCamera(devices[currentIndex].deviceId);
+  };
+
+  snapBtn.onclick = async () => {
+    if (!video.srcObject || video.readyState < 2) {
+      alert("Camera not ready yet");
+      return;
+    }
+
+    const container = document.getElementById("camera-container");
+    const canvas = document.createElement("canvas");
+    canvas.width = container.clientWidth;
+    canvas.height = container.clientHeight;
+    const ctx = canvas.getContext("2d");
+
+    // Fill white background
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Draw video
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    // Draw border
+    const borderImg = new Image();
+    borderImg.crossOrigin = "anonymous";
+    borderImg.src = "https://lbemcrfivrhbhseafrlc.supabase.co/storage/v1/object/public/Party%20Photos/Border%20Flyer.png?v=1";
+
+    borderImg.onload = async () => {
+      ctx.drawImage(borderImg, 0, 0, canvas.width, canvas.height);
+
+      canvas.toBlob(async (blob) => {
+        if (!blob) return alert("Capture failed.");
+
+        const fileName = `Zaimar_${Date.now()}.png`;
+
+        const { error } = await supabaseClient.storage
+          .from("Party Photos")
+          .upload(fileName, blob, { contentType: "image/png", upsert: true });
+
+        if (error) {
+          console.error(error);
+          return alert(error.message);
+        }
+
+        alert("Photo uploaded! 🎉");
+      }, "image/png");
+    };
+  };
+
+});
+</script>
+</body>
+</html>
