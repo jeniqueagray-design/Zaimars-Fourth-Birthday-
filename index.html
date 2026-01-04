@@ -14,16 +14,8 @@ body {
   color: white;
 }
 
-h1 {
-  margin-top: 20px;
-  font-size: 3em;
-  text-shadow: 2px 2px 5px #000;
-}
-
-p {
-  font-size: 1.5em;
-  text-shadow: 1px 1px 0 #000;
-}
+h1 { margin-top: 20px; font-size: 3em; text-shadow: 2px 2px 5px #000; }
+p { font-size: 1.5em; text-shadow: 1px 1px 0 #000; }
 
 #camera-container {
   position: relative;
@@ -66,22 +58,9 @@ button {
   transition: transform 0.1s ease;
 }
 
-button:hover {
-  transform: scale(1.05);
-}
-
-button:disabled {
-  background-color: #888;
-  cursor: not-allowed;
-}
-
-.gallery-link {
-  display: block;
-  margin-top: 15px;
-  font-size: 1.2em;
-  color: #fff;
-  text-decoration: underline;
-}
+button:hover { transform: scale(1.05); }
+button:disabled { background-color: #888; cursor: not-allowed; }
+.gallery-link { display: block; margin-top: 15px; font-size: 1.2em; color: #fff; text-decoration: underline; }
 </style>
 </head>
 <body>
@@ -91,8 +70,7 @@ button:disabled {
 
 <div id="camera-container">
   <video id="video" autoplay playsinline></video>
-  <!-- Live border overlay -->
-  <img id="border-overlay" src="https://lbemcrfivrhbhseafrlc.supabase.co/storage/v1/object/public/Party%20Photos/Border%20Flyer.png?v=1" alt="Border Overlay">
+  <img id="border-overlay" src="https://lbemcrfivrhbhseafrlc.supabase.co/storage/v1/object/public/Party%20Photos/Border%20Flyer.png" alt="Border Overlay">
 </div>
 
 <br />
@@ -120,7 +98,7 @@ document.addEventListener("DOMContentLoaded", () => {
   let devices = [];
   let currentIndex = 0;
 
-  // Enumerate all cameras
+  // Get all cameras
   async function getCameras() {
     try {
       const allDevices = await navigator.mediaDevices.enumerateDevices();
@@ -143,7 +121,6 @@ document.addEventListener("DOMContentLoaded", () => {
       currentStream = await navigator.mediaDevices.getUserMedia(constraints);
       video.srcObject = currentStream;
 
-      // Wait until video is ready
       await new Promise(resolve => {
         if (video.readyState >= 2) resolve();
         else video.onloadedmetadata = resolve;
@@ -159,12 +136,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Start button
   startBtn.onclick = async () => {
-    try {
-      // Ask for camera permission first
-      await navigator.mediaDevices.getUserMedia({ video: true });
-    } catch {
-      return alert("Camera permission denied.");
-    }
+    try { await navigator.mediaDevices.getUserMedia({ video: true }); } 
+    catch { return alert("Camera permission denied."); }
 
     await getCameras();
     if (devices.length === 0) return alert("No cameras found.");
@@ -181,10 +154,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Snap button
   snapBtn.onclick = async () => {
-    if (!video.srcObject || video.readyState < 2) return alert("Camera not ready");
+    if (!video.srcObject || video.videoWidth === 0 || video.videoHeight === 0) 
+      return alert("Camera not ready");
 
     const canvas = document.createElement("canvas");
-    // Use video resolution for full quality
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
     const ctx = canvas.getContext("2d");
@@ -195,7 +168,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // Draw border
     const borderImg = new Image();
     borderImg.crossOrigin = "anonymous";
-    borderImg.src = "https://lbemcrfivrhbhseafrlc.supabase.co/storage/v1/object/public/Party%20Photos/Border%20Flyer.png?v=1";
+    borderImg.src = "https://lbemcrfivrhbhseafrlc.supabase.co/storage/v1/object/public/Party%20Photos/Border%20Flyer.png";
 
     borderImg.onload = async () => {
       ctx.drawImage(borderImg, 0, 0, canvas.width, canvas.height);
@@ -205,15 +178,11 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!blob) return alert("Capture failed.");
 
         const fileName = `Zaimar_${Date.now()}.png`;
-
         const { error } = await supabaseClient.storage
           .from("Party Photos")
           .upload(fileName, blob, { contentType: "image/png", upsert: true });
 
-        if (error) {
-          console.error(error);
-          return alert(error.message);
-        }
+        if (error) { console.error(error); return alert(error.message); }
 
         const { data } = supabaseClient.storage
           .from("Party Photos")
@@ -224,6 +193,26 @@ document.addEventListener("DOMContentLoaded", () => {
         </a>`;
 
         alert("Photo uploaded! 🎉");
+      }, "image/png");
+    };
+
+    // Fallback: if border fails to load, still upload
+    borderImg.onerror = async () => {
+      console.warn("Border failed to load, uploading photo without it");
+      canvas.toBlob(async (blob) => {
+        if (!blob) return alert("Capture failed.");
+        const fileName = `Zaimar_${Date.now()}.png`;
+        const { error } = await supabaseClient.storage
+          .from("Party Photos")
+          .upload(fileName, blob, { contentType: "image/png", upsert: true });
+        if (error) return alert(error.message);
+        const { data } = supabaseClient.storage
+          .from("Party Photos")
+          .getPublicUrl(fileName);
+        latestLinkDiv.innerHTML = `<a class="gallery-link" href="${data.publicUrl}" target="_blank">
+          View Last Uploaded Photo
+        </a>`;
+        alert("Photo uploaded without border! 🎉");
       }, "image/png");
     };
   };
