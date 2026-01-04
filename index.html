@@ -34,7 +34,6 @@ p {
   overflow: hidden;
   border-radius: 25px;
   background: rgba(255,255,255,0.1);
-  border: 3px solid red; /* remove if not debugging */
 }
 
 #camera-container video {
@@ -92,6 +91,7 @@ button:disabled {
 
 <div id="camera-container">
   <video id="video" autoplay playsinline></video>
+  <!-- Live border overlay -->
   <img id="border-overlay" src="https://lbemcrfivrhbhseafrlc.supabase.co/storage/v1/object/public/Party%20Photos/Border%20Flyer.png?v=1" alt="Border Overlay">
 </div>
 
@@ -105,6 +105,7 @@ button:disabled {
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 document.addEventListener("DOMContentLoaded", () => {
+
   const supabaseUrl = "https://lbemcrfivrhbhseafrlc.supabase.co";
   const supabaseKey = "sb_publishable_ey_VaVfrz5YwZIxTHcHcaA_pSY5W8-R";
   const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
@@ -119,14 +120,14 @@ document.addEventListener("DOMContentLoaded", () => {
   let devices = [];
   let currentIndex = 0;
 
-  // Get all cameras
+  // Enumerate all cameras
   async function getCameras() {
     try {
       const allDevices = await navigator.mediaDevices.enumerateDevices();
       devices = allDevices.filter(d => d.kind === "videoinput");
       toggleBtn.disabled = devices.length < 2;
     } catch (err) {
-      console.error("Error enumerating devices:", err);
+      console.error("Device enumeration error:", err);
     }
   }
 
@@ -149,6 +150,7 @@ document.addEventListener("DOMContentLoaded", () => {
       });
 
       snapBtn.disabled = false;
+
     } catch (err) {
       console.error("Camera error:", err);
       alert("Cannot access camera. Make sure permissions are allowed and page is HTTPS.");
@@ -170,31 +172,27 @@ document.addEventListener("DOMContentLoaded", () => {
     await startCamera(devices[currentIndex].deviceId);
   };
 
-  // Toggle button
-  toggleBtn.onclick = () => {
+  // Toggle camera
+  toggleBtn.onclick = async () => {
     if (devices.length < 2) return;
     currentIndex = (currentIndex + 1) % devices.length;
-    startCamera(devices[currentIndex].deviceId);
+    await startCamera(devices[currentIndex].deviceId);
   };
 
   // Snap button
   snapBtn.onclick = async () => {
     if (!video.srcObject || video.readyState < 2) return alert("Camera not ready");
 
-    const container = document.getElementById("camera-container");
     const canvas = document.createElement("canvas");
-    canvas.width = container.clientWidth;
-    canvas.height = container.clientHeight;
+    // Use video resolution for full quality
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
     const ctx = canvas.getContext("2d");
-
-    // Fill white background for quality
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     // Draw video
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-    // Draw border overlay
+    // Draw border
     const borderImg = new Image();
     borderImg.crossOrigin = "anonymous";
     borderImg.src = "https://lbemcrfivrhbhseafrlc.supabase.co/storage/v1/object/public/Party%20Photos/Border%20Flyer.png?v=1";
@@ -202,6 +200,7 @@ document.addEventListener("DOMContentLoaded", () => {
     borderImg.onload = async () => {
       ctx.drawImage(borderImg, 0, 0, canvas.width, canvas.height);
 
+      // Upload to Supabase
       canvas.toBlob(async (blob) => {
         if (!blob) return alert("Capture failed.");
 
