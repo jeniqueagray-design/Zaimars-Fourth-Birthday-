@@ -29,8 +29,8 @@
     position: relative;
     display: inline-block;
     margin-top: 20px;
-    width: 340px;
-    height: 260px;
+    width: 340px; /* display width */
+    height: 260px; /* display height */
     overflow: hidden;
     border-radius: 25px;
     background: rgba(255,255,255,0.1);
@@ -41,6 +41,10 @@
     height: 100%;
     object-fit: cover;
     display: block;
+  }
+
+  #qr-code {
+    margin-top: 20px;
   }
 
   button {
@@ -81,6 +85,16 @@
 <button id="start">Start Camera</button>
 <button id="toggle" disabled>Switch Camera</button>
 <button id="snap">Take Photo</button>
+
+<!-- Optional: QR code to upload photos to Google Form -->
+<div id="qr-code">
+  <p>Scan this QR code to upload your photo to the gallery:</p>
+  <img src="YOUR_QR_CODE.png" alt="Scan QR code" width="200">
+</div>
+
+<!-- Optional: link to gallery -->
+<h2>Party Gallery</h2>
+<p><a href="YOUR_SHARED_DRIVE_FOLDER_LINK" target="_blank">View all photos here!</a></p>
 
 <script>
 const video = document.getElementById("video");
@@ -137,27 +151,33 @@ toggleBtn.onclick = () => {
   startCamera(devices[currentIndex].deviceId);
 };
 
-// Snap photo with border
+// Snap photo with border and automatic download
 snapBtn.onclick = () => {
-  const container = document.getElementById("camera-container");
+  // Use video native resolution for sharpness
   const canvas = document.createElement("canvas");
-  canvas.width = container.clientWidth;
-  canvas.height = container.clientHeight;
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
   const ctx = canvas.getContext("2d");
 
-  // Draw the video
+  // Draw video
   ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-  // Draw the border image
+  // Draw the transparent border
   const borderImg = new Image();
-  borderImg.src = 'Border%20Flyer.png'; // make sure your file is in root
+  borderImg.src = 'Border%20Flyer.png'; // make sure this file is in your repo root
   borderImg.onload = () => {
     ctx.drawImage(borderImg, 0, 0, canvas.width, canvas.height);
 
-    // Open photo in new tab
+    // Convert canvas to data URL
     const dataURL = canvas.toDataURL("image/png");
-    const win = window.open();
-    win.document.write(`<img src="${dataURL}" width="100%">`);
+
+    // Automatic download
+    const link = document.createElement('a');
+    link.href = dataURL;
+    link.download = `Zaimar_Photo_${Date.now()}.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 };
 </script>
