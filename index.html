@@ -12,18 +12,22 @@
     background: url('Dinosaur%20and%20unicorn%20birthday%20party.png') no-repeat center center fixed;
     background-size: cover;
     text-align: center;
+    color: white;
   }
 
   h1 {
     margin-top: 20px;
     font-size: 3em;
     text-shadow: 2px 2px 5px #000;
+    position: relative;
+    z-index: 10;
   }
 
   p {
     font-size: 1.5em;
-    color: black;
-    text-shadow: 1px 1px 0 #fff;
+    text-shadow: 1px 1px 0 #000;
+    position: relative;
+    z-index: 10;
   }
 
   #camera-container {
@@ -35,6 +39,8 @@
     overflow: hidden;
     border-radius: 25px;
     background: rgba(255,255,255,0.1);
+    border: 3px solid red; /* temporary for debugging layout */
+    z-index: 10;
   }
 
   #camera-container video {
@@ -49,13 +55,4 @@
     font-size: 18px;
     border-radius: 12px;
     cursor: pointer;
-    background: linear-gradient(45deg, #ff69b4, #ffb6c1);
-    border: none;
-    color: white;
-    font-weight: bold;
-    box-shadow: 2px 2px 5px #000;
-  }
-
-  button:disabled {
-    background: #888;
-    cursor: not-allowed
+    background: linear-gradient(45deg, #ff69b4, #f
