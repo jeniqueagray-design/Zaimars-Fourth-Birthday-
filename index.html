@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <title>Zaimars Turns Four 🎉</title>
+
 <style>
 body {
   margin: 0;
@@ -11,14 +12,14 @@ body {
   background: url('Dinosaur%20and%20unicorn%20birthday%20party.png') no-repeat center center fixed;
   background-size: cover;
   text-align: center;
-  color: white;
 }
 
+/* Title */
 h1 {
   margin-top: 20px;
   font-size: 3em;
-  text-shadow: 2px 2px 5px #fff; /* optional soft white shadow */
-  color: black; /* Zaimars Turns Four in black */
+  color: black;
+  text-shadow: 2px 2px 4px #fff;
 }
 
 p {
@@ -26,12 +27,16 @@ p {
   text-shadow: 1px 1px 0 #000;
 }
 
+/* Camera container */
 #camera-container {
   position: relative;
   display: inline-block;
   margin-top: 20px;
-  width: 340px;
-  height: 260px;
+
+  width: 90vw;
+  max-width: 520px;
+  aspect-ratio: 4 / 3;
+
   overflow: hidden;
   border-radius: 25px;
   background: rgba(255,255,255,0.1);
@@ -43,19 +48,20 @@ p {
   object-fit: cover;
 }
 
+/* Border overlay */
 #border-overlay {
   position: absolute;
-  top: 0;
-  left: 0;
+  inset: 0;
   width: 100%;
   height: 100%;
   pointer-events: none;
   z-index: 10;
 }
 
+/* Buttons */
 button {
   margin: 10px;
-  padding: 10px 20px;
+  padding: 10px 22px;
   font-size: 18px;
   border-radius: 12px;
   cursor: pointer;
@@ -64,29 +70,25 @@ button {
   color: white;
   font-weight: bold;
   box-shadow: 2px 2px 5px #000;
-  transition: transform 0.1s ease;
 }
 
-button:hover { transform: scale(1.05); }
-button:disabled { background-color: #888; cursor: not-allowed; }
-
-.gallery-link {
-  display: block;
-  margin-top: 15px;
-  font-size: 1.2em;
-  color: black; /* View Last Uploaded Photo in black */
-  text-decoration: underline;
+button:disabled {
+  background: #888;
+  cursor: not-allowed;
 }
 
+/* Links */
+.gallery-link,
 #view-gallery {
   display: block;
-  margin-top: 10px;
+  margin-top: 12px;
   font-size: 1.2em;
-  color: black; /* View Gallery link in black */
+  color: black;
   text-decoration: underline;
 }
 </style>
 </head>
+
 <body>
 
 <h1>🎉 Zaimars Turns Four 🎉</h1>
@@ -94,18 +96,26 @@ button:disabled { background-color: #888; cursor: not-allowed; }
 
 <div id="camera-container">
   <video id="video" autoplay playsinline></video>
-  <img id="border-overlay" src="https://lbemcrfivrhbhseafrlc.supabase.co/storage/v1/object/public/Party%20Photos/Border%20Flyer.png" alt="Border Overlay">
+  <img
+    id="border-overlay"
+    src="https://lbemcrfivrhbhseafrlc.supabase.co/storage/v1/object/public/Party%20Photos/Border%20Flyer.png"
+    alt="Border Overlay"
+  />
 </div>
 
-<br />
+<br>
+
 <button id="start">Start Camera</button>
 <button id="toggle" disabled>Switch Camera</button>
 <button id="snap" disabled>Take Photo</button>
 
 <div id="latest-photo-link"></div>
 
-<!-- View Gallery Link -->
-<a id="view-gallery" href="https://drive.google.com/drive/folders/1NVzPpcGULNBn3ytPbDzFAFmCUn28G1HQ?usp=drive_link" target="_blank">
+<a
+  id="view-gallery"
+  href="https://drive.google.com/drive/folders/1NVzPpcGULNBn3ytPbDzFAFmCUn28G1HQ?usp=drive_link"
+  target="_blank"
+>
   View Gallery
 </a>
 
@@ -113,9 +123,10 @@ button:disabled { background-color: #888; cursor: not-allowed; }
 <script>
 document.addEventListener("DOMContentLoaded", () => {
 
-  const supabaseUrl = "https://lbemcrfivrhbhseafrlc.supabase.co";
-  const supabaseKey = "sb_publishable_ey_VaVfrz5YwZIxTHcHcaA_pSY5W8-R";
-  const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
+  const supabase = window.supabase.createClient(
+    "https://lbemcrfivrhbhseafrlc.supabase.co",
+    "sb_publishable_ey_VaVfrz5YwZIxTHcHcaA_pSY5W8-R"
+  );
 
   const video = document.getElementById("video");
   const startBtn = document.getElementById("start");
@@ -123,112 +134,81 @@ document.addEventListener("DOMContentLoaded", () => {
   const snapBtn = document.getElementById("snap");
   const latestLinkDiv = document.getElementById("latest-photo-link");
 
-  let currentStream = null;
-  let devices = [];
-  let currentIndex = 0;
+  let stream = null;
+  let cameras = [];
+  let cameraIndex = 0;
 
   async function getCameras() {
-    try {
-      const allDevices = await navigator.mediaDevices.enumerateDevices();
-      devices = allDevices.filter(d => d.kind === "videoinput");
-      toggleBtn.disabled = devices.length < 2;
-    } catch (err) {
-      console.error("Device enumeration error:", err);
-    }
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    cameras = devices.filter(d => d.kind === "videoinput");
+    toggleBtn.disabled = cameras.length < 2;
   }
 
   async function startCamera(deviceId) {
-    try {
-      if (currentStream) currentStream.getTracks().forEach(track => track.stop());
-      const constraints = deviceId
-        ? { video: { deviceId: { exact: deviceId } } }
-        : { video: { facingMode: { ideal: "environment" } } };
-      currentStream = await navigator.mediaDevices.getUserMedia(constraints);
-      video.srcObject = currentStream;
-      await new Promise(resolve => {
-        if (video.readyState >= 2) resolve();
-        else video.onloadedmetadata = resolve;
-      });
-      snapBtn.disabled = false;
-    } catch (err) {
-      console.error("Camera error:", err);
-      alert("Cannot access camera. Make sure permissions are allowed and page is HTTPS.");
-    }
+    if (stream) stream.getTracks().forEach(t => t.stop());
+
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: deviceId ? { deviceId: { exact: deviceId } } : true
+    });
+
+    video.srcObject = stream;
+
+    await new Promise(r => video.onloadedmetadata = r);
+    snapBtn.disabled = false;
   }
 
   startBtn.onclick = async () => {
-    try { await navigator.mediaDevices.getUserMedia({ video: true }); } 
-    catch { return alert("Camera permission denied."); }
+    await navigator.mediaDevices.getUserMedia({ video: true });
     await getCameras();
-    if (devices.length === 0) return alert("No cameras found.");
-    currentIndex = 0;
-    await startCamera(devices[currentIndex].deviceId);
+    cameraIndex = 0;
+    startCamera(cameras[cameraIndex]?.deviceId);
   };
 
-  toggleBtn.onclick = async () => {
-    if (devices.length < 2) return;
-    currentIndex = (currentIndex + 1) % devices.length;
-    await startCamera(devices[currentIndex].deviceId);
+  toggleBtn.onclick = () => {
+    cameraIndex = (cameraIndex + 1) % cameras.length;
+    startCamera(cameras[cameraIndex].deviceId);
   };
 
   snapBtn.onclick = async () => {
-    if (!video.srcObject || video.videoWidth === 0 || video.videoHeight === 0) 
-      return alert("Camera not ready");
+    if (!video.videoWidth) return alert("Camera not ready");
 
     const canvas = document.createElement("canvas");
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
+
     const ctx = canvas.getContext("2d");
+    ctx.drawImage(video, 0, 0);
 
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const border = new Image();
+    border.crossOrigin = "anonymous";
+    border.src = document.getElementById("border-overlay").src;
 
-    const borderImg = new Image();
-    borderImg.crossOrigin = "anonymous";
-    borderImg.src = "https://lbemcrfivrhbhseafrlc.supabase.co/storage/v1/object/public/Party%20Photos/Border%20Flyer.png";
+    border.onload = async () => {
+      ctx.drawImage(border, 0, 0, canvas.width, canvas.height);
 
-    borderImg.onload = async () => {
-      ctx.drawImage(borderImg, 0, 0, canvas.width, canvas.height);
-      canvas.toBlob(async (blob) => {
-        if (!blob) return alert("Capture failed.");
+      canvas.toBlob(async blob => {
         const fileName = `Zaimar_${Date.now()}.png`;
-        const { error } = await supabaseClient.storage
-          .from("Party Photos")
-          .upload(fileName, blob, { contentType: "image/png", upsert: true });
-        if (error) return alert(error.message);
 
-        const { data } = supabaseClient.storage
+        await supabase.storage
+          .from("Party Photos")
+          .upload(fileName, blob, { contentType: "image/png" });
+
+        const { data } = supabase.storage
           .from("Party Photos")
           .getPublicUrl(fileName);
 
-        latestLinkDiv.innerHTML = `<a class="gallery-link" href="${data.publicUrl}" target="_blank">
-          View Last Uploaded Photo
-        </a>`;
+        latestLinkDiv.innerHTML = `
+          <a class="gallery-link" href="${data.publicUrl}" target="_blank">
+            View Last Uploaded Photo
+          </a>
+        `;
+
         alert("Photo uploaded! 🎉");
-      }, "image/png");
-    };
-
-    borderImg.onerror = async () => {
-      console.warn("Border failed to load, uploading photo without it");
-      canvas.toBlob(async (blob) => {
-        if (!blob) return alert("Capture failed.");
-        const fileName = `Zaimar_${Date.now()}.png`;
-        const { error } = await supabaseClient.storage
-          .from("Party Photos")
-          .upload(fileName, blob, { contentType: "image/png", upsert: true });
-        if (error) return alert(error.message);
-
-        const { data } = supabaseClient.storage
-          .from("Party Photos")
-          .getPublicUrl(fileName);
-
-        latestLinkDiv.innerHTML = `<a class="gallery-link" href="${data.publicUrl}" target="_blank">
-          View Last Uploaded Photo
-        </a>`;
-        alert("Photo uploaded without border! 🎉");
-      }, "image/png");
+      });
     };
   };
 });
 </script>
+
 </body>
 </html>
