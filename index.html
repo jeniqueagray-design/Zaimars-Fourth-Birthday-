@@ -29,8 +29,8 @@
     position: relative;
     display: inline-block;
     margin-top: 20px;
-    width: 340px; /* display width */
-    height: 260px; /* display height */
+    width: 340px;
+    height: 260px;
     overflow: hidden;
     border-radius: 25px;
     background: rgba(255,255,255,0.1);
@@ -56,10 +56,6 @@
     border: 3px solid #fff;
     border-radius: 10px;
     box-shadow: 2px 2px 5px #000;
-  }
-
-  #qr-code {
-    margin-top: 20px;
   }
 
   button {
@@ -98,70 +94,4 @@
 
 <br>
 <button id="start">Start Camera</button>
-<button id="toggle" disabled>Switch Camera</button>
-<button id="snap">Take Photo</button>
-
-<!-- Optional: QR code to upload photos to Google Form -->
-<div id="qr-code">
-  <p>Scan this QR code to upload your photo to the gallery (optional):</p>
-  <img src="YOUR_QR_CODE.png" alt="Scan QR code" width="200">
-</div>
-
-<h2>Party Gallery</h2>
-<div id="gallery"></div>
-
-<!-- Supabase JS -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script>
-  const supabaseUrl = 'https://lbemcrfivrhbhseafrlc.supabase.co';
-  const supabaseKey = 'sb_publishable_ey_VaVfrz5YwZIxTHcHcaA_pSY5W8-R';
-  const supabase = supabase.createClient(supabaseUrl, supabaseKey);
-
-  const video = document.getElementById("video");
-  const startBtn = document.getElementById("start");
-  const toggleBtn = document.getElementById("toggle");
-  const snapBtn = document.getElementById("snap");
-  const gallery = document.getElementById("gallery");
-
-  let currentStream = null;
-  let devices = [];
-  let currentIndex = 0;
-
-  async function getCameras() {
-    const allDevices = await navigator.mediaDevices.enumerateDevices();
-    devices = allDevices.filter(d => d.kind === "videoinput");
-    if (devices.length > 1) toggleBtn.disabled = false;
-  }
-
-  async function startCamera(deviceId) {
-    if (currentStream) currentStream.getTracks().forEach(track => track.stop());
-    let constraints = deviceId ? { video: { deviceId: { exact: deviceId } } } : { video: { facingMode: { ideal: "environment" } } };
-    try {
-      currentStream = await navigator.mediaDevices.getUserMedia(constraints);
-      video.srcObject = currentStream;
-    } catch (err) {
-      alert("Cannot access camera. Try a different browser.");
-      console.error(err);
-    }
-  }
-
-  startBtn.onclick = async () => {
-    await getCameras();
-    if (devices.length === 0) return alert("No cameras found.");
-    currentIndex = 0;
-    startCamera(devices[currentIndex]?.deviceId);
-  };
-
-  toggleBtn.onclick = () => {
-    if (devices.length < 2) return;
-    currentIndex = (currentIndex + 1) % devices.length;
-    startCamera(devices[currentIndex].deviceId);
-  };
-
-  // Load existing gallery from Supabase
-  async function loadGallery() {
-    const { data, error } = await supabase.storage.from('party-photos').list('', { limit: 100, sortBy: { column: 'created_at', order: 'desc' }});
-    if (error) return console.error(error);
-    gallery.innerHTML = '';
-    for (const file of data) {
-      const { publicUrl }
+<button id="toggle" disabled>Switch Camera</but
