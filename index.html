@@ -36,23 +36,11 @@
     background: rgba(255,255,255,0.1);
   }
 
-  /* Video feed */
   #camera-container video {
     width: 100%;
     height: 100%;
     object-fit: cover;
     display: block;
-  }
-
-  /* Border image overlay */
-  #border-image {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    pointer-events: none;
-    z-index: 2;
   }
 
   button {
@@ -87,8 +75,6 @@
 
 <div id="camera-container">
   <video id="video" autoplay playsinline></video>
-  <!-- Overlay your uploaded border image -->
-  <img id="border-image" src="Border%20Flyer.png" alt="Border">
 </div>
 
 <br>
@@ -159,17 +145,20 @@ snapBtn.onclick = () => {
   canvas.height = container.clientHeight;
   const ctx = canvas.getContext("2d");
 
-  // Draw video
+  // Draw the video
   ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
   // Draw the border image
-  const borderImg = document.getElementById("border-image");
-  ctx.drawImage(borderImg, 0, 0, canvas.width, canvas.height);
+  const borderImg = new Image();
+  borderImg.src = 'Border%20Flyer.png'; // make sure your file is in root
+  borderImg.onload = () => {
+    ctx.drawImage(borderImg, 0, 0, canvas.width, canvas.height);
 
-  // Open photo in new tab
-  const dataURL = canvas.toDataURL("image/png");
-  const win = window.open();
-  win.document.write(`<img src="${dataURL}" width="100%">`);
+    // Open photo in new tab
+    const dataURL = canvas.toDataURL("image/png");
+    const win = window.open();
+    win.document.write(`<img src="${dataURL}" width="100%">`);
+  };
 };
 </script>
 
