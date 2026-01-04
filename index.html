@@ -46,7 +46,47 @@
       console.error(err);
     });
   };
+<script>
+  const video = document.getElementById("video");
+  const startBtn = document.getElementById("start");
+  const toggleBtn = document.getElementById("toggle");
+
+  let currentFacing = "environment"; // start with back camera
+  let currentStream = null;
+
+  async function startCamera(facingMode) {
+    if (currentStream) {
+      // Stop all tracks of previous stream
+      currentStream.getTracks().forEach(track => track.stop());
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { exact: facingMode } }
+      });
+      currentStream = stream;
+      video.srcObject = stream;
+      toggleBtn.disabled = false; // enable toggle button
+    } catch (err) {
+      // Fallback if exact facingMode not supported
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: true
+      });
+      currentStream = stream;
+      video.srcObject = stream;
+      console.error(err);
+    }
+  }
+
+  startBtn.onclick = () => startCamera(currentFacing);
+
+  toggleBtn.onclick = () => {
+    // Toggle between front and back
+    currentFacing = currentFacing === "environment" ? "user" : "environment";
+    startCamera(currentFacing);
+  };
 </script>
+
 
 </body>
 </html>
