@@ -95,9 +95,8 @@
 <button id="toggle" disabled>Switch Camera</button>
 <button id="snap" disabled>Take Photo</button>
 
-<a class="gallery-link" href="https://lbemcrfivrhbhseafrlc.supabase.co/storage/v1/object/public/Party%20Photos/" target="_blank">
-  View Gallery
-</a>
+<!-- Dynamic link to last uploaded photo -->
+<div id="latest-photo-link"></div>
 
 <!-- Supabase JS -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -112,6 +111,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const startBtn = document.getElementById("start");
   const toggleBtn = document.getElementById("toggle");
   const snapBtn = document.getElementById("snap");
+  const latestLinkDiv = document.getElementById("latest-photo-link");
 
   let currentStream = null;
   let devices = [];
@@ -180,7 +180,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // Draw video
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-    // Draw border
+    // Draw border (optional)
     const borderImg = new Image();
     borderImg.crossOrigin = "anonymous";
     borderImg.src = "https://lbemcrfivrhbhseafrlc.supabase.co/storage/v1/object/public/Party%20Photos/Border%20Flyer.png?v=1";
@@ -201,6 +201,17 @@ document.addEventListener("DOMContentLoaded", () => {
           console.error(error);
           return alert(error.message);
         }
+
+        // Success! Show a link to the uploaded photo
+        const { data } = supabaseClient.storage
+          .from("Party Photos")
+          .getPublicUrl(fileName);
+
+        latestLinkDiv.innerHTML = `
+          <a class="gallery-link" href="${data.publicUrl}" target="_blank">
+            View Last Uploaded Photo
+          </a>
+        `;
 
         alert("Photo uploaded! 🎉");
       }, "image/png");
