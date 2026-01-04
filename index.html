@@ -1,9 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
+<meta charset="UTF-8">
 <title>Zaimars Turns Four 🎉</title>
-
 <style>
   body {
     margin: 0;
@@ -12,20 +11,17 @@
     background: url('Dinosaur%20and%20unicorn%20birthday%20party.png') no-repeat center center fixed;
     background-size: cover;
     text-align: center;
-    color: white;
   }
-
   h1 {
     margin-top: 20px;
     font-size: 3em;
     text-shadow: 2px 2px 5px #000;
   }
-
   p {
     font-size: 1.5em;
-    text-shadow: 1px 1px 0 #000;
+    color: black;
+    text-shadow: 1px 1px 0 #fff;
   }
-
   #camera-container {
     position: relative;
     display: inline-block;
@@ -35,18 +31,20 @@
     overflow: hidden;
     border-radius: 25px;
     background: rgba(255,255,255,0.1);
-    border: 3px solid red;
   }
-
-  #camera-container video, #camera-container img#border-overlay {
+  #camera-container video {
     width: 100%;
     height: 100%;
     object-fit: cover;
+  }
+  #border-overlay {
     position: absolute;
     top: 0;
     left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none; /* so it doesn’t block clicks */
   }
-
   button {
     margin: 10px;
     padding: 10px 20px;
@@ -58,13 +56,13 @@
     color: white;
     font-weight: bold;
     box-shadow: 2px 2px 5px #000;
+    transition: transform 0.1s ease;
   }
-
+  button:hover { transform: scale(1.05); }
   button:disabled {
-    background: #888;
+    background-color: #888;
     cursor: not-allowed;
   }
-
   .gallery-link {
     display: block;
     margin-top: 15px;
@@ -81,14 +79,14 @@
 
 <div id="camera-container">
   <video id="video" autoplay playsinline></video>
-  <img id="border-overlay" src="https://lbemcrfivrhbhseafrlc.supabase.co/storage/v1/object/public/Party%20Photos/Border%20Flyer.png" alt="border overlay">
+  <!-- Live border overlay -->
+  <img id="border-overlay" src="Border%20Flyer.png" alt="Border Overlay">
 </div>
 
-<br />
-
+<br>
 <button id="start">Start Camera</button>
 <button id="toggle" disabled>Switch Camera</button>
-<button id="snap" disabled>Take Photo</button>
+<button id="snap">Take Photo</button>
 
 <div id="latest-photo-link">
   <a class="gallery-link" href="https://drive.google.com/drive/folders/1NVzPpcGULNBn3ytPbDzFAFmCUn28G1HQ?usp=drive_link" target="_blank">
@@ -96,102 +94,81 @@
   </a>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-document.addEventListener("DOMContentLoaded", () => {
+const video = document.getElementById("video");
+const startBtn = document.getElementById("start");
+const toggleBtn = document.getElementById("toggle");
+const snapBtn = document.getElementById("snap");
 
-  const supabaseUrl = "https://lbemcrfivrhbhseafrlc.supabase.co";
-  const supabaseKey = "sb_publishable_ey_VaVfrz5YwZIxTHcHcaA_pSY5W8-R";
-  const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
+let currentStream = null;
+let devices = [];
+let currentIndex = 0;
 
-  const video = document.getElementById("video");
-  const startBtn = document.getElementById("start");
-  const toggleBtn = document.getElementById("toggle");
-  const snapBtn = document.getElementById("snap");
+// Get all cameras
+async function getCameras() {
+  const allDevices = await navigator.mediaDevices.enumerateDevices();
+  devices = allDevices.filter(d => d.kind === "videoinput");
+  toggleBtn.disabled = devices.length < 2;
+}
 
-  let currentStream = null;
-  let devices = [];
-  let currentIndex = 0;
-
-  async function getCameras() {
-    const allDevices = await navigator.mediaDevices.enumerateDevices();
-    devices = allDevices.filter(d => d.kind === "videoinput");
-    toggleBtn.disabled = devices.length < 2;
+// Start camera
+async function startCamera(deviceId) {
+  if (currentStream) {
+    currentStream.getTracks().forEach(track => track.stop());
   }
 
-  async function startCamera(deviceId) {
-    try {
-      if (currentStream) currentStream.getTracks().forEach(track => track.stop());
+  const constraints = deviceId
+    ? { video: { deviceId: { exact: deviceId } } }
+    : { video: { facingMode: { ideal: "environment" } } };
 
-      const constraints = deviceId
-        ? { video: { deviceId: { exact: deviceId } } }
-        : { video: { facingMode: "environment" } };
-
-      currentStream = await navigator.mediaDevices.getUserMedia(constraints);
-      video.srcObject = currentStream;
-
-      await new Promise(resolve => {
-        if (video.readyState >= 2) resolve();
-        else video.onloadedmetadata = resolve;
-      });
-
-      snapBtn.disabled = false;
-    } catch (err) {
-      console.error("Camera error:", err);
-      alert("Cannot access camera. Make sure permissions are allowed and page is HTTPS.");
-    }
+  try {
+    currentStream = await navigator.mediaDevices.getUserMedia(constraints);
+    video.srcObject = currentStream;
+  } catch (err) {
+    alert("Cannot access camera. Try a different browser.");
+    console.error(err);
   }
+}
 
-  startBtn.onclick = async () => {
-    await getCameras();
-    if (devices.length === 0) return alert("No cameras found.");
-    currentIndex = 0;
-    await startCamera(devices[currentIndex].deviceId);
-  };
+// Start camera button
+startBtn.onclick = async () => {
+  await getCameras();
+  if (devices.length === 0) {
+    alert("No cameras found.");
+    return;
+  }
+  currentIndex = 0;
+  startCamera(devices[currentIndex]?.deviceId);
+};
 
-  toggleBtn.onclick = async () => {
-    if (devices.length < 2) return;
-    currentIndex = (currentIndex + 1) % devices.length;
-    await startCamera(devices[currentIndex].deviceId);
-  };
+// Toggle camera button
+toggleBtn.onclick = () => {
+  if (devices.length < 2) return;
+  currentIndex = (currentIndex + 1) % devices.length;
+  startCamera(devices[currentIndex].deviceId);
+};
 
-  snapBtn.onclick = async () => {
-    if (!video.srcObject || video.readyState < 2) {
-      return alert("Camera not ready yet");
-    }
+// Snap photo
+snapBtn.onclick = () => {
+  const container = document.getElementById("camera-container");
+  const canvas = document.createElement("canvas");
+  canvas.width = container.clientWidth;
+  canvas.height = container.clientHeight;
+  const ctx = canvas.getContext("2d");
 
-    const container = document.getElementById("camera-container");
-    const canvas = document.createElement("canvas");
-    canvas.width = container.clientWidth;
-    canvas.height = container.clientHeight;
-    const ctx = canvas.getContext("2d");
+  // Draw video
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-    // Draw video first
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+  // Draw border overlay
+  const borderImg = document.getElementById("border-overlay");
+  ctx.drawImage(borderImg, 0, 0, canvas.width, canvas.height);
 
-    // Draw the overlay border on the canvas
-    const borderImg = document.getElementById("border-overlay");
-    ctx.drawImage(borderImg, 0, 0, canvas.width, canvas.height);
-
-    canvas.toBlob(async blob => {
-      if (!blob) return alert("Capture failed.");
-
-      const fileName = `Zaimar_${Date.now()}.png`;
-
-      const { error } = await supabaseClient.storage
-        .from("Party Photos")
-        .upload(fileName, blob, { contentType: "image/png", upsert: true });
-
-      if (error) {
-        console.error(error);
-        return alert(error.message);
-      }
-
-      alert("Photo uploaded! 🎉");
-    }, "image/png");
-  };
-
-});
+  // Open captured photo in new tab
+  const dataURL = canvas.toDataURL("image/png");
+  const win = window.open();
+  win.document.write(`<img src="${dataURL}" width="100%">`);
+};
 </script>
+
 </body>
 </html>
