@@ -8,6 +8,8 @@
       color: white;
       text-align: center;
       font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
     }
     video {
       width: 90%;
@@ -32,20 +34,7 @@
 <br>
 <button id="start">Start Camera</button>
 <button id="toggle" disabled>Switch Camera</button>
-  button.onclick = () => {
-    navigator.mediaDevices.getUserMedia({
-      video: {
-        facingMode: { ideal: "environment" }
-      }
-    })
-    .then(stream => {
-      video.srcObject = stream;
-    })
-    .catch(err => {
-      alert("Could not access camera. Try a different browser.");
-      console.error(err);
-    });
-  };
+
 <script>
 const video = document.getElementById("video");
 const startBtn = document.getElementById("start");
@@ -96,5 +85,6 @@ toggleBtn.onclick = () => {
   startCamera(devices[currentIndex].deviceId);
 };
 </script>
+
 </body>
 </html>
