@@ -7,14 +7,12 @@
 <style>
 body {
   margin: 0;
-  padding: 0;
   font-family: 'Comic Sans MS', Arial, sans-serif;
   background: url('Dinosaur%20and%20unicorn%20birthday%20party.png') no-repeat center center fixed;
   background-size: cover;
   text-align: center;
 }
 
-/* Fade background */
 body::before {
   content: "";
   position: fixed;
@@ -23,19 +21,10 @@ body::before {
   z-index: -1;
 }
 
-h1 {
-  margin: 10px 0 5px;
-  font-size: clamp(2.2rem, 5vw, 3.2rem);
+h1, p {
   color: black;
 }
 
-p {
-  font-size: 1.4em;
-  margin-bottom: 10px;
-  color: black;
-}
-
-/* BIG camera */
 #camera-container {
   position: relative;
   width: 92vw;
@@ -45,26 +34,23 @@ p {
   border-radius: 30px;
   overflow: hidden;
   background: black;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.4);
 }
 
-#camera-container video {
+video {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
-/* Border overlay */
 #border-overlay {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
   pointer-events: none;
-  z-index: 10;
+  z-index: 5;
 }
 
-/* Buttons */
 button {
   margin: 8px;
   padding: 14px 26px;
@@ -81,13 +67,11 @@ button:disabled {
   background: #999;
 }
 
-/* Links */
 a {
   display: block;
-  margin: 10px 0;
+  margin: 10px;
   font-size: 1.2em;
   color: black;
-  text-decoration: underline;
 }
 </style>
 </head>
@@ -98,11 +82,11 @@ a {
 <p>Roar • Sparkle • Shine</p>
 
 <div id="camera-container">
-  <video id="video" autoplay playsinline></video>
+  <video id="video" playsinline></video>
   <img
     id="border-overlay"
+    crossorigin="anonymous"
     src="https://lbemcrfivrhbhseafrlc.supabase.co/storage/v1/object/public/Party%20Photos/Border%20Flyer.png"
-    alt="Border"
   />
 </div>
 
@@ -112,18 +96,14 @@ a {
 
 <div id="latest-photo-link"></div>
 
-<a
-  id="view-gallery"
-  href="YOUR_GOOGLE_DRIVE_LINK_HERE"
-  target="_blank"
->
+<a href="https://drive.google.com/drive/folders/1NVzPpcGULNBn3ytPbDzFAFmCUn28G1HQ?usp=drive_link" target="_blank">
 View Gallery
 </a>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <script>
-document.addEventListener("DOMContentLoaded", async () => {
+document.addEventListener("DOMContentLoaded", () => {
 
   const supabase = window.supabase.createClient(
     "https://lbemcrfivrhbhseafrlc.supabase.co",
@@ -131,57 +111,57 @@ document.addEventListener("DOMContentLoaded", async () => {
   );
 
   const video = document.getElementById("video");
+  const border = document.getElementById("border-overlay");
   const startBtn = document.getElementById("start");
   const toggleBtn = document.getElementById("toggle");
   const snapBtn = document.getElementById("snap");
-  const latestLinkDiv = document.getElementById("latest-photo-link");
+  const latestLink = document.getElementById("latest-photo-link");
 
-  let devices = [];
-  let currentIndex = 0;
-  let stream = null;
+  let stream;
+  let cameras = [];
+  let camIndex = 0;
 
-  async function getCameras() {
-    const all = await navigator.mediaDevices.enumerateDevices();
-    devices = all.filter(d => d.kind === "videoinput");
-    toggleBtn.disabled = devices.length < 2;
-  }
-
-  async function startCamera(deviceId) {
-    if (stream) stream.getTracks().forEach(t => t.stop());
-
+  async function startBaseCamera() {
     stream = await navigator.mediaDevices.getUserMedia({
-      video: {
-        deviceId: deviceId ? { exact: deviceId } : undefined,
-        width: { ideal: 1920 },
-        height: { ideal: 1080 }
-      }
+      video: { facingMode: "environment" }
     });
 
     video.srcObject = stream;
     await video.play();
+
+    await new Promise(r => video.onplaying = r);
+
     snapBtn.disabled = false;
+
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    cameras = devices.filter(d => d.kind === "videoinput");
+    toggleBtn.disabled = cameras.length < 2;
   }
 
-  startBtn.onclick = async () => {
-    await getCameras();
-    currentIndex = 0;
-    await startCamera(devices[currentIndex].deviceId);
-  };
+  async function switchCamera() {
+    camIndex = (camIndex + 1) % cameras.length;
+    if (stream) stream.getTracks().forEach(t => t.stop());
 
-  toggleBtn.onclick = async () => {
-    currentIndex = (currentIndex + 1) % devices.length;
-    await startCamera(devices[currentIndex].deviceId);
-  };
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: { deviceId: { exact: cameras[camIndex].deviceId } }
+    });
 
-  snapBtn.onclick = async () => {
+    video.srcObject = stream;
+    await video.play();
+  }
+
+  startBtn.onclick = startBaseCamera;
+  toggleBtn.onclick = switchCamera;
+
+  snapBtn.onclick = () => {
+    if (video.videoWidth === 0) return alert("Camera not ready");
+
     const canvas = document.createElement("canvas");
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
+
     const ctx = canvas.getContext("2d");
-
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-    const border = document.getElementById("border-overlay");
+    ctx.drawImage(video, 0, 0);
     ctx.drawImage(border, 0, 0, canvas.width, canvas.height);
 
     canvas.toBlob(async blob => {
@@ -205,14 +185,9 @@ document.addEventListener("DOMContentLoaded", async () => {
         .from("Party Photos")
         .getPublicUrl(fileName);
 
-      latestLinkDiv.innerHTML = `
-        <a href="${data.publicUrl}" target="_blank">
-          View Last Uploaded Photo
-        </a>
-      `;
-
+      latestLink.innerHTML = `<a href="${data.publicUrl}" target="_blank">View Last Uploaded Photo</a>`;
       alert("Photo uploaded! 🎉");
-    }, "image/png");
+    });
   };
 });
 </script>
